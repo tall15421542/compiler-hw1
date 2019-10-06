@@ -555,7 +555,7 @@ SymbolTable build( Program program )
 
 void convertType2(Expression *old, DataType type){
 	if(old->v.type == FloatConst && type == Int){
-        printf("error : can't convert float to integer\n");
+        printf("error2 : can't convert float to integer\n");
         return;
 	}
 	if(old->v.type == IntConst && type == Float){
@@ -584,7 +584,7 @@ void convertType2(Expression *old, DataType type){
 void convertType( Expression * old, DataType type )
 {
     if(old->type == Float && type == Int){
-        printf("error : can't convert float to integer\n");
+        printf("error : can't convert \'%c\' float to integer\n", old->v.val.id);
         return;
     }
     if(old->type == Int && type == Float){
@@ -874,54 +874,46 @@ void constant_opt_subtree(Expression * expression){
 	constant_opt_subtree(right);
 	if(left == NULL || right == NULL) return;
 	if((left->v.type == IntConst || left->v.type == FloatConst) &&
-		right->v.type == IntConst || right->v.type == FloatConst){
+		(right->v.type == IntConst || right->v.type == FloatConst)){
         DataType type = generalize2(left, right);
         convertType2(left, type);//left->type = type;//converto
         convertType2(right, type);//right->type = type;//converto
 		switch(type){
 			case Int:
-				cout << "INT" << endl;
 				switch(expression->v.val.op){
 					case Plus:
 						expression->v.val.ivalue = left->v.val.ivalue + right->v.val.ivalue;
-						expression->v.type = PlusNode;
 						break;
 					case Minus:
 						expression->v.val.ivalue = left->v.val.ivalue - right->v.val.ivalue;
-						expression->v.type = MinusNode;
 						break;
 					case Mul:
 						expression->v.val.ivalue = left->v.val.ivalue * right->v.val.ivalue;
-						expression->v.type = MulNode;
 						break;
 					case Div:
 						expression->v.val.ivalue = left->v.val.ivalue / right->v.val.ivalue;
-						expression->v.type = DivNode;
 						break;
 				}
 				expression->v.type = IntConst;
+				expression->type = Int;
 				break;
 			case Float:
-				cout << "FLOAT" << endl;
 				switch(expression->v.val.op){
 					case Plus:
 						expression->v.val.fvalue = left->v.val.fvalue + right->v.val.fvalue;
-						expression->v.type = PlusNode;
 						break;
 					case Minus:
 						expression->v.val.fvalue = left->v.val.fvalue - right->v.val.fvalue;
-						expression->v.type = MinusNode;
 						break;
 					case Mul:
 						expression->v.val.fvalue = left->v.val.fvalue * right->v.val.fvalue;
-						expression->v.type = MulNode;
 						break;
 					case Div:
 						expression->v.val.fvalue = left->v.val.fvalue / right->v.val.fvalue;
-						expression->v.type = DivNode;
 						break;
 				}
 				expression->v.type = FloatConst;
+				expression->type = Float;
 				break;
 		}
 		free(right);
