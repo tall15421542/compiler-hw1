@@ -108,11 +108,13 @@ Token scanner( FILE *source )
         token.tok[0] = c;
         token.tok[1] = '\0';
         if( islower(c) ){
-            if( c == 'f' )
+			char peek = fgetc(source);
+			ungetc(peek, source);
+            if( isspace(peek) && c == 'f' )
                 token.type = FloatDeclaration;
-            else if( c == 'i' )
+            else if(isspace(peek) && c == 'i' )
                 token.type = IntegerDeclaration;
-            else if( c == 'p' )
+            else if(isspace(peek) && c == 'p' )
                 token.type = PrintOp;
             else{
 				string str;
