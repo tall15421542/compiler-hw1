@@ -33,11 +33,12 @@ int main( int argc, char *argv[] )
         else{
             program = parser(source);
             fclose(source);
+			constant_folding(program);
+			test_parser(program);
             symtab = build(program);
             check(&program, &symtab);
             gencode(program, target);
 			source = fopen(argv[1], "r");
-			test_parser(source);
         }
     }
     else{
@@ -101,15 +102,22 @@ Token scanner( FILE *source )
 
     while( !feof(source) ){
         c = fgetc(source);
-		
         while( isspace(c) ) c = fgetc(source);
+#ifdef DEBUG
+	    cout << "\'" << c << "\'" << endl;	
+#endif
         if( isdigit(c) )
             return getNumericToken(source, c);
         token.tok[0] = c;
         token.tok[1] = '\0';
         if( islower(c) ){
 			char peek = fgetc(source);
-			ungetc(peek, source);
+			if(peek == EOF){
+				ungetc(' ', source);
+			}
+			else{
+				ungetc(peek, source);
+			}
             if( isspace(peek) && c == 'f' )
                 token.type = FloatDeclaration;
             else if(isspace(peek) && c == 'i' )
@@ -123,7 +131,9 @@ Token scanner( FILE *source )
 					c = fgetc(source);
 				}
 				if(!isspace(c)) ungetc(c, source);
-				
+#ifdef DEBUG
+				cout << "\"" << str << "\"" << endl;
+#endif
 				unordered_map<string, char>::iterator it = id_table.find(str);
 				if(it == id_table.end()){
 					id_table.insert(make_pair(str, id_cnt));
@@ -542,6 +552,35 @@ SymbolTable build( Program program )
   Type checking
  *********************************************************************/
 
+
+void convertType2(Expression *old, DataType type){
+	if(old->v.type == FloatConst && type == Int){
+        printf("error : can't convert float to integer\n");
+        return;
+	}
+	if(old->v.type == IntConst && type == Float){
+        Expression *tmp = (Expression *)malloc( sizeof(Expression) );
+        if(old->v.type == Identifier)
+            printf("convert to float %c \n",old->v.val.id);
+        else
+            printf("convert to float %d \n", old->v.val.ivalue);
+        tmp->v = old->v;
+        tmp->leftOperand = old->leftOperand;
+        tmp->rightOperand = old->rightOperand;
+        tmp->type = old->type;
+
+        Value v;
+        v.type = IntToFloatConvertNode;
+        v.val.op = IntToFloatConvert;
+		v.val.fvalue = (float)old->v.val.ivalue;
+        old->v = v;
+        old->type = Int;
+        old->leftOperand = tmp;
+        old->rightOperand = NULL;
+	}
+}
+
+
 void convertType( Expression * old, DataType type )
 {
     if(old->type == Float && type == Int){
@@ -562,6 +601,7 @@ void convertType( Expression * old, DataType type )
         Value v;
         v.type = IntToFloatConvertNode;
         v.val.op = IntToFloatConvert;
+		v.val.fvalue = (float)old->v.val.ivalue;
         old->v = v;
         old->type = Int;
         old->leftOperand = tmp;
@@ -569,6 +609,11 @@ void convertType( Expression * old, DataType type )
     }
 }
 
+DataType generalize2(Expression *left, Expression * right){
+	if(left->v.type == FloatConst || right->v.type == FloatConst)
+		return Float;
+	return Int;
+}
 DataType generalize( Expression *left, Expression *right )
 {
     if(left->type == Float || right->type == Float){
@@ -784,13 +829,12 @@ void print_expr(Expression *expr)
     }
 }
 
-void test_parser( FILE *source )
+void test_parser(Program program)
 {
     Declarations *decls;
     Statements *stmts;
     Declaration decl;
     Statement stmt;
-    Program program = parser(source);
 
     decls = program.declarations;
 
@@ -819,4 +863,83 @@ void test_parser( FILE *source )
         stmts = stmts->rest;
     }
 
+}
+
+/* constant folding */
+void constant_opt_subtree(Expression * expression){
+	if(expression == NULL) return;
+	Expression * left = expression->leftOperand;
+	Expression * right = expression->rightOperand;
+	constant_opt_subtree(left);
+	constant_opt_subtree(right);
+	if(left == NULL || right == NULL) return;
+	if((left->v.type == IntConst || left->v.type == FloatConst) &&
+		right->v.type == IntConst || right->v.type == FloatConst){
+        DataType type = generalize2(left, right);
+        convertType2(left, type);//left->type = type;//converto
+        convertType2(right, type);//right->type = type;//converto
+		switch(type){
+			case Int:
+				cout << "INT" << endl;
+				switch(expression->v.val.op){
+					case Plus:
+						expression->v.val.ivalue = left->v.val.ivalue + right->v.val.ivalue;
+						expression->v.type = PlusNode;
+						break;
+					case Minus:
+						expression->v.val.ivalue = left->v.val.ivalue - right->v.val.ivalue;
+						expression->v.type = MinusNode;
+						break;
+					case Mul:
+						expression->v.val.ivalue = left->v.val.ivalue * right->v.val.ivalue;
+						expression->v.type = MulNode;
+						break;
+					case Div:
+						expression->v.val.ivalue = left->v.val.ivalue / right->v.val.ivalue;
+						expression->v.type = DivNode;
+						break;
+				}
+				expression->v.type = IntConst;
+				break;
+			case Float:
+				cout << "FLOAT" << endl;
+				switch(expression->v.val.op){
+					case Plus:
+						expression->v.val.fvalue = left->v.val.fvalue + right->v.val.fvalue;
+						expression->v.type = PlusNode;
+						break;
+					case Minus:
+						expression->v.val.fvalue = left->v.val.fvalue - right->v.val.fvalue;
+						expression->v.type = MinusNode;
+						break;
+					case Mul:
+						expression->v.val.fvalue = left->v.val.fvalue * right->v.val.fvalue;
+						expression->v.type = MulNode;
+						break;
+					case Div:
+						expression->v.val.fvalue = left->v.val.fvalue / right->v.val.fvalue;
+						expression->v.type = DivNode;
+						break;
+				}
+				expression->v.type = FloatConst;
+				break;
+		}
+		free(right);
+		free(left);
+		expression->rightOperand = expression->leftOperand = NULL;
+		return;
+	}
+	return;
+}
+void constant_folding(Program program){
+    Statements *stmts;
+    Statement stmt;
+	stmts = program.statements;
+	while(stmts != NULL){
+		stmt = stmts->first;
+		if(stmt.type == Assignment){
+			constant_opt_subtree(stmt.stmt.assign.expr);
+		}
+		stmts = stmts->rest;
+	}
 }

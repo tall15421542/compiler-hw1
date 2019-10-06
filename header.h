@@ -141,6 +141,7 @@ void fprint_expr( FILE *target, Expression *expr );
 void gencode( Program prog, FILE * target );
 
 void print_expr( Expression *expr );
-void test_parser( FILE *source );
+void test_parser(Program program);
 
+void constant_folding(Program);
 #endif // HEADER_H_INCLUDED
