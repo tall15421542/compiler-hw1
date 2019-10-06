@@ -105,7 +105,6 @@ Token scanner( FILE *source )
         while( isspace(c) ) c = fgetc(source);
         if( isdigit(c) )
             return getNumericToken(source, c);
-
         token.tok[0] = c;
         token.tok[1] = '\0';
         if( islower(c) ){
@@ -162,7 +161,6 @@ Token scanner( FILE *source )
                 exit(1);
         }
     }
-
     token.tok[0] = '\0';
     token.type = EOFsymbol;
     return token;
@@ -174,7 +172,9 @@ Token scanner( FILE *source )
  *********************************************************/
 Declaration parseDeclaration( FILE *source, Token token )
 {
-
+#ifdef DEBUG
+	cout << "parseDeclaration" << endl;
+#endif
     Token token2;
     switch(token.type){
         case FloatDeclaration:
@@ -195,6 +195,9 @@ Declaration parseDeclaration( FILE *source, Token token )
 
 Declarations *parseDeclarations( FILE *source )
 {
+#ifdef DEBUG
+	cout << "parseDeclarations" << endl;
+#endif
     Token token = scanner(source);
     Declaration decl;
     Declarations *decls;
@@ -207,7 +210,6 @@ Declarations *parseDeclarations( FILE *source )
         case PrintOp:
 			ungetc(token.tok[0], source);
 			return NULL;
-			break;
         case Alphabet:
             ungetString(most_recent_id, source);
 			return NULL;
@@ -221,6 +223,9 @@ Declarations *parseDeclarations( FILE *source )
 
 Expression *parseFactor( FILE *source )
 {
+#ifdef DEBUG
+	cout << "parseFactor" << endl;
+#endif
     Token token = scanner(source);
     Expression *value = (Expression *)malloc( sizeof(Expression) );
     value->leftOperand = value->rightOperand = NULL;
@@ -247,13 +252,16 @@ Expression *parseFactor( FILE *source )
 }
 
 Expression *parseValue(FILE * source){
+#ifdef DEBUG
+	cout << "parseValue" << endl;
+#endif
 	Expression * factor = parseFactor(source);
 	Token token = scanner(source);
 	if(token.type != MulOp && token.type != DivOp){
 		if(token.type == Alphabet){
 			ungetString(most_recent_id, source);
 		}
-		else{
+		else if(token.type != EOFsymbol){
 			ungetc(token.tok[0], source);
 		}
 		return factor;
@@ -279,6 +287,9 @@ Expression *parseValue(FILE * source){
 
 Expression *parseExpressionTail( FILE *source, Expression *lvalue )
 {
+#ifdef DEBUG
+	cout << "parseExpressionTail" << endl;
+#endif
     Token token = scanner(source);
     Expression *expr;
 
@@ -314,6 +325,9 @@ Expression *parseExpressionTail( FILE *source, Expression *lvalue )
 
 Expression *parseExpression( FILE *source, Expression *lvalue )
 {
+#ifdef DEBUG
+	cout << "parseExpression" << endl;
+#endif
     Token token = scanner(source);
     Expression *expr;
 
@@ -349,6 +363,9 @@ Expression *parseExpression( FILE *source, Expression *lvalue )
 
 Statement parseStatement( FILE *source, Token token )
 {
+#ifdef DEBUG
+	cout << "parseStatement" << endl;
+#endif
     Token next_token;
     Expression *value, *expr;
 
@@ -381,7 +398,9 @@ Statement parseStatement( FILE *source, Token token )
 
 Statements *parseStatements( FILE * source )
 {
-
+#ifdef DEBUG
+	cout << "parseStatements" << endl;
+#endif
     Token token = scanner(source);
     Statement stmt;
     Statements *stmts;
